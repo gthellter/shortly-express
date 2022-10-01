@@ -6,7 +6,9 @@
 
 // Sessions and cookies
   // Write  a cookie parser middleware
+    //req.Cookie => session_id=id;
   // Write a session generator middleware.
+    //in res.setHeader('set-cookie', 'session_id=id')
   // store generated hashes in the database table "Sessions"
 
   // In middleware/cookieParser.js, write a middleware function that will access the cookies on an incoming request, parse them into an object, and assign this object to a cookies property on the request.

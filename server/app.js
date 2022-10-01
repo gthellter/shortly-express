@@ -3,6 +3,7 @@ const path = require('path');
 const utils = require('./lib/hashUtils');
 const partials = require('express-partials');
 const Auth = require('./middleware/auth');
+const cookieParser = require('./middleware/cookieParser');
 const models = require('./models');
 
 const app = express();
@@ -14,12 +15,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-
-
-app.get('/',
-  (req, res) => {
-    res.render('index');
-  });
+app.get('/', cookieParser, (req, res) => {
+  res.render('index');
+});
 
 app.get('/create',
   (req, res) => {
@@ -38,7 +36,7 @@ app.get('/links',
   });
 
 
-app.post('/links',
+app.post('/links', Auth.createSession,
   (req, res, next) => {
     var url = req.body.url;
     if (!models.Links.isValidUrl(url)) {
@@ -84,11 +82,30 @@ app.get('/login', (req, res) => {
   res.render('login');
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', Auth.createSession, (req, res) => {
   models.Users.get({ 'username': req.body.username }).then((user) => {
-    var isAuth = models.Users.compare(req.body.password, user.password, user.salt);
-    if (isAuth) {
-      res.render('index');
+    var username = req.body.username;
+    var password = req.body.password;
+
+    if (username && password && user) {
+      var isAuth = models.Users.compare(password, user.password, user.salt);
+
+      if (isAuth) {
+        res.set({
+          'location': '/'
+        });
+        res.render('index');
+      } else {
+        res.set({
+          'location': '/login'
+        });
+        res.render('login');
+      }
+    } else {
+      res.set({
+        'location': '/login'
+      });
+      res.render('login');
     }
 
   }).catch((err) => console.log(err));
@@ -103,19 +120,32 @@ app.get('/signup', (req, res) => {
   res.render('signup');
 });
 
-app.post('/signup', (req, res) => {
+app.post('/signup', Auth.createSession, (req, res) => {
   var user = models.Users;
 
   var { username, password } = req.body;
+
   if (username && password) {
+
     user.create(req.body).then((user) => {
+      if (user) {
+        res.set({
+          'location': '/'
+        });
         res.render('index');
+      }
     }).catch((err) => {
       if (err) {
-        res.render('login');
+        res.set({
+          'location': '/signup'
+        });
+        res.render('signup');
       }
     });
   } else if (username === '' || password === '') {
+    res.set({
+      'location': '/signup'
+    });
     res.render('signup');
   }
 });
